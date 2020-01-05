@@ -56,24 +56,6 @@ dt_train <- pul_str_2[n_train]
 dt_test <- pul_str_2[-n_train]
 
 
-### Split dataset into train and test ###
-## Copy dataset.
-pul_str_2 <- copy(pul_str)
-
-## Convert all string variables to factor type.
-x_char <- sapply(pul_str_2[, !c("target_class")], is.character)
-x_char <- names(x_char[x_char==TRUE])
-suppressWarnings(pul_str_2[, c(x_char):=lapply(.SD, as.factor), .SDcols=x_char])
-rm(x_char)
-
-## Training dataset indeces.
-n_train <- sample(x=1:nrow(pul_str_2), size=floor(nrow(pul_str_2)*0.70), replace=FALSE)
-
-## Train and test set.
-dt_train <- pul_str_2[n_train]
-dt_test <- pul_str_2[-n_train]
-
-
 ### Conduct model experiments ###
 ## Set empty model prediction results tables.
 # names of each model vector.
@@ -126,13 +108,13 @@ perm_imp_res <- data.table(model_name=NA,
 model_names <- c(model_names, "glm 01")
 
 # model train.
-glm_01 <- glm(formula=target_class~., data=dt_train, family="binomial", control=glm.control(epsilon=1e-05, maxit=100))
+model <- glm(formula=target_class~., data=dt_train, family="binomial", control=glm.control(epsilon=1e-05, maxit=100))
 
 # model test.
-mod_prob <- predict(object=glm_01, newdata=dt_test, type="response")
+mod_prob <- predict(object=model, newdata=dt_test, type="response")
 
 # find optimal probability threshold.
-roc_prob_thr <- roc(dt=dt_test, dt_act=dt_test[, target_class], model=glm_01, model_name="glm 01", pred_func="predict(object=model, newdata=dt, type=\"response\")", prob_thresh=seq(from=0, to=1, by=0.01))
+roc_prob_thr <- roc(dt=dt_test, dt_act=dt_test[, target_class], model=model, model_name="glm 01", pred_func="predict(object=model, newdata=dt, type=\"response\")", prob_thresh=seq(from=0, to=1, by=0.01))
 prob_thr_val <- roc_prob_thr$roc_dt[order(-f1_score)][, first(prob_threshold)] # prob~0.3
 
 # consolidate roc results.
@@ -148,7 +130,7 @@ mod_pred <- ifelse(mod_prob>=prob_thr_val, 1, 0)
 perf_res_lst <- model_performance(model="glm 01", predict=mod_pred, actual=dt_test[, target_class])
 
 # consolidate confusion matrix results.
-conf_mat[[1]] <- perf_res_lst$confusion_matrix
+conf_mat <- c(conf_mat, perf_res_lst$confusion_matrix)
 
 # consolidate model performance results.
 perf_res <- rbindlist(l=list(perf_res, perf_res_lst$performance_results), use.names=TRUE, fill=TRUE)
@@ -157,13 +139,13 @@ perf_res <- rbindlist(l=list(perf_res, perf_res_lst$performance_results), use.na
 perf_res_cons <- rbindlist(l=list(perf_res_cons, perf_res_lst$results_consolidated), use.names=TRUE, fill=TRUE)
 
 # permutation importance.
-perm_imp <- permutation_importance(dt=dt_test, y="target_class", model=glm_01, model_name="glm 01", pred_func="predict(object=model, newdata=dt, type=\"response\")", loss="logloss", class_0_1_prob=TRUE, n_perm=20, newdata_command_update=NULL)
+perm_imp <- permutation_importance(dt=dt_test, y="target_class", model=model, model_name="glm 01", pred_func="predict(object=model, newdata=dt, type=\"response\")", loss="logloss", class_0_1_prob=TRUE, n_perm=10, newdata_command_update=NULL)
 
 # consolidate permutation importance results.
 perm_imp_res <- rbindlist(l=list(perm_imp_res, perm_imp), use.names=TRUE, fill=TRUE)
 
 # store model.
-model_lst[[1]] <- glm_01
+model_lst <- c(model_lst, model)
 
 # remove objects.
-rm(glm_01, mod_prob, mod_pred, roc_prob_thr, prob_thr_val, perf_res_lst, perm_imp)
+rm(model, mod_prob, mod_pred, roc_prob_thr, prob_thr_val, perf_res_lst, perm_imp)
