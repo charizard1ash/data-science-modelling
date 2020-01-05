@@ -16,8 +16,8 @@ library(shiny)
 
 
 ### Set variables ###
-data_location <- "/Users/minathaniel/Documents/Data/Kaggle/"
-function_location <- "/Users/minathaniel/Documents/R/R Scripts/Functions/"
+data_location <- ""
+function_location <- ""
 
 
 ### Import existing and set new functions ###
