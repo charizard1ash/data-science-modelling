@@ -16,8 +16,8 @@ library(shiny)
 
 
 ### Set variables ###
-data_location <- ""
-function_location <- ""
+data_location <- "user-to-add"
+function_location <- "user-to-add"
 
 
 ### Import existing and set new functions ###
