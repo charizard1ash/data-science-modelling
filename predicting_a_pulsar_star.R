@@ -16,8 +16,8 @@ library(shiny)
 
 
 ### Set variables ###
-data_location <- "user-to-add"
-function_location <- "user-to-add"
+data_location <- ""
+function_location <- ""
 
 
 ### Import existing and set new functions ###
@@ -130,7 +130,7 @@ mod_pred <- ifelse(mod_prob>=prob_thr_val, 1, 0)
 perf_res_lst <- model_performance(model="glm 01", predict=mod_pred, actual=dt_test[, target_class])
 
 # consolidate confusion matrix results.
-conf_mat <- c(conf_mat, perf_res_lst$confusion_matrix)
+conf_mat[[1]] <- perf_res_lst$confusion_matrix
 
 # consolidate model performance results.
 perf_res <- rbindlist(l=list(perf_res, perf_res_lst$performance_results), use.names=TRUE, fill=TRUE)
@@ -145,7 +145,7 @@ perm_imp <- permutation_importance(dt=dt_test, y="target_class", model=model, mo
 perm_imp_res <- rbindlist(l=list(perm_imp_res, perm_imp), use.names=TRUE, fill=TRUE)
 
 # store model.
-model_lst <- c(model_lst, model)
+model_lst[[1]] <- model
 
 # remove objects.
 rm(model, mod_prob, mod_pred, roc_prob_thr, prob_thr_val, perf_res_lst, perm_imp)
