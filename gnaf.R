@@ -30,7 +30,6 @@ gnaf_geo <- mclapply(gnaf_files[grepl("/.*._address_default_geocode_psv.psv$", t
 gnaf_geo <- rbindlist(l=gnaf_geo, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_geo, by.x=c("GNAF_ID"), by.y=c("ADDRESS_DETAIL_PID"), all=TRUE)
 rm(gnaf_geo)
-gc(reset=TRUE)
 
 # detail.
 gnaf_dtl <- mclapply(gnaf_files[grepl("/.*._address_detail_psv.psv$", tolower(Name))==TRUE, Name],
@@ -48,7 +47,6 @@ gnaf_dtl <- mclapply(gnaf_files[grepl("/.*._address_detail_psv.psv$", tolower(Na
 gnaf_dtl <- rbindlist(l=gnaf_dtl, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_dtl, by.x=c("GNAF_ID"), by.y=c("ADDRESS_DETAIL_PID"), all=TRUE)
 rm(gnaf_dtl)
-gc(reset=TRUE)
 
 # census meshblock 2016.
 gnaf_mb16 <- mclapply(gnaf_files[grepl("*/.*._address_mesh_block_2016_psv.psv$", tolower(Name))==TRUE, Name],
@@ -62,7 +60,6 @@ gnaf_mb16 <- mclapply(gnaf_files[grepl("*/.*._address_mesh_block_2016_psv.psv$",
 gnaf_mb16 <- rbindlist(l=gnaf_mb16, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_mb16, by.x=c("GNAF_ID"), by.y=c("ADDRESS_DETAIL_PID"), all=TRUE)
 rm(gnaf_mb16)
-gc(reset=TRUE)
 
 # street locality name.
 gnaf_strt_loc <- mclapply(gnaf_files[grepl("*/.*._street_locality_psv.psv$", tolower(Name))==TRUE, Name],
@@ -75,7 +72,6 @@ gnaf_strt_loc <- mclapply(gnaf_files[grepl("*/.*._street_locality_psv.psv$", tol
 gnaf_strt_loc <- rbindlist(l=gnaf_strt_loc, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_strt_loc, by.x=c("STREET_LOCALITY_PID"), by.y=c("STREET_LOCALITY_PID"), all.x=TRUE)
 rm(gnaf_strt_loc)
-gc(reset=TRUE)
 
 # locality name.
 gnaf_loc_nm <- mclapply(gnaf_files[grepl("*/.*._locality_psv.psv$", tolower(Name))==TRUE & grepl("_street_", tolower(Name))==FALSE, Name],
@@ -88,7 +84,6 @@ gnaf_loc_nm <- mclapply(gnaf_files[grepl("*/.*._locality_psv.psv$", tolower(Name
 gnaf_loc_nm <- rbindlist(l=gnaf_loc_nm, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_loc_nm, by.x=c("LOCALITY_PID"), by.y=c("LOCALITY_PID"), all.x=TRUE)
 rm(gnaf_loc_nm)
-gc(reset=TRUE)
 
 # state.
 gnaf_state <- mclapply(gnaf_files[grepl("*/.*._state_psv.psv$", tolower(Name))==TRUE, Name],
@@ -101,16 +96,6 @@ gnaf_state <- mclapply(gnaf_files[grepl("*/.*._state_psv.psv$", tolower(Name))==
 gnaf_state <- rbindlist(l=gnaf_state, use.names=TRUE, fill=TRUE)
 gnaf <- merge(gnaf, gnaf_state, by.x=c("STATE_PID"), by.y=c("STATE_PID"), all.x=TRUE)
 rm(gnaf_state)
-gc(reset=TRUE)
-
-gnaf_nt <- mclapply(gnaf_files[grepl("/nt_", tolower(Name))==TRUE, Name],
-                    function(x1) {
-                      print(paste0("file: ", x1))
-                      dt_1 <- read.delim(file=unzip(zipfile=paste0(geo_location, "nov19_gnaf_pipeseparatedvalue.zip"), files=x1), sep="|", header=TRUE, check.names=FALSE, stringsAsFactors=FALSE)
-                      setDT(dt_1)
-                      return(dt_1)
-                    },
-                    mc.cores=no_cores)
 
 # remove unnecessary objects.
 rm(gnaf_files)
