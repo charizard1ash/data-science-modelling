@@ -5,16 +5,8 @@ library(parallel)
 
 
 ### Set variables ###
-geo_location <- "/Users/minathaniel/Documents/Data/PSMA/"
-r_func_location <- "/Users/minathaniel/Documents/R/R Scripts/Functions/"
-no_cores <- detectCores(logical=FALSE)
-
-
-### Set functions ###
-## Pre-defined functios.
-source(file=paste0(r_func_location, "roc.R"))
-source(file=paste0(r_func_location, "model_performance.R"))
-source(file=paste0(r_func_location, "permutation_importance.R"))
+geo_location <- "" # location of file downloaded from https://data.gov.au/dataset/ds-dga-19432f89-dc3a-4ef3-b943-5326ef1dbecc/details?q=
+no_cores <- detectCores()
 
 
 ### Import data ###
