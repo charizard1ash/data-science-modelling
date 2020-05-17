@@ -71,4 +71,21 @@ model_roc_temp[!, :model_name] .= "glm 01"
 model_auc_temp = df.DataFrame(model_name="glm 01", auc=model_auc_temp)
 model_roc = vcat(model_roc, model_roc_temp)
 model_auc = vcat(model_auc, model_auc_temp)
-model_roc_temp, model_auc_temp = nothing, nothing
+model_prob, model_roc_temp, model_auc_temp = nothing, nothing, nothing;
+
+## decision tree
+dt_iris = DecisionTree.DecisionTreeClassifier(; max_depth=20,
+    min_samples_leaf=5,
+    min_samples_split=2,
+    min_purity_increase=0.001);
+@time DecisionTree.fit!(dt_iris, Array(df_train[:, [:SepalWidth, :SepalLength, :PetalWidth, :PetalLength]]), df_train[:, :versicolor_flag]);
+model_prob = DecisionTree.predict_proba(dt_iris, Array(df_test[:, [:SepalWidth, :SepalLength, :PetalWidth, :PetalLength]]))[:, 2];
+model_roc_temp, model_auc_temp = roc(model_prob, df_test[:, :versicolor_flag]; prob_thresh=collect(0:0.01:1));
+model_roc_temp[!, :model_name] .= "decision tree 01";
+model_auc_temp = df.DataFrame(model_name="decision tree 01", auc=model_auc_temp);
+model_roc = vcat(model_roc, model_roc_temp);
+model_auc = vcat(model_auc, model_auc_temp);
+model_prob, model_roc_temp, model_auc_temp = nothing, nothing, nothing;
+
+## random forest
+rf_iris = DecisionTree.RandomForestClassifier(;)
