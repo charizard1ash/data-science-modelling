@@ -103,3 +103,20 @@ model_auc_temp = df.DataFrame(model_name="random forest 01", auc=model_auc_temp)
 model_roc = vcat(model_roc, model_roc_temp);
 model_auc = vcat(model_auc, model_auc_temp);
 model_prob, model_roc_temp, model_auc_temp = Array{Union{Nothing, Float64}}(nothing, 3, 1);
+
+## xgboost
+@time xgb_iris = XGBoost.xgboost(Array(df_train[:, [:SepalWidth, :SepalLength, :PetalWidth, :PetalLength]]), 7;
+    label=df_train[:, :versicolor_flag],
+    eta=0.1,
+    gamma=0.001,
+    max_depth=3,
+    objective="binary:logistic");
+model_prob = XGBoost.predict(xgb_iris, Array(df_test[:, [:SepalWidth, :SepalLength, :PetalWidth, :PetalLength]]));
+model_roc_temp, model_auc_temp = roc(model_prob, df_test[:, :versicolor_flag]; prob_thresh=collect(0:0.01:1));
+model_roc_temp[!, :model_name] .= "xgboost 01";
+model_auc_temp = df.DataFrame(model_name="xgboost 01", auc=model_auc_temp);
+model_roc = vcat(model_roc, model_roc_temp);
+model_auc = vcat(model_auc, model_auc_temp);
+model_prob, model_roc_temp, model_auc_temp = Array{Union{Nothing, Float64}}(nothing, 3, 1);
+
+## neural network
