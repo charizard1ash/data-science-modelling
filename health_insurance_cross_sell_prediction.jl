@@ -53,4 +53,11 @@ println(x_1) # keep policy sales channels 152, 26, 124, 160, 156, 122, 157, 154,
 
 
 ### feature engineering ###
-hl_train[!, :Region_Code_2] = ifelse.(in.(hl_train[:Region_Code], (["28","8","46","41","15","30","29","50","3"],)) .== true, hl_train[:, :Region_Code], "other")
+hl_train[!, :Region_Code_2] = ifelse.(in.(hl_train[:Region_Code], (["28","8","46","41","15","30","29","50","3"],)) .== true, hl_train[:Region_Code], "other")
+println(df.by(hl_train, :Region_Code_2,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)))
+hl_train[!, :Policy_Sales_Channel_2] = ifelse.(in.(hl_train[:Policy_Sales_Channel], (["152","26","124","160","156","122","157","154","151"],)) .== true, hl_train[:Policy_Sales_Channel], "other")
+println(df.by(hl_train, :Policy_Sales_Channel_2,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)))
