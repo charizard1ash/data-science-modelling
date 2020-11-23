@@ -6,6 +6,7 @@ using Distributions, StatsBase, Statistics
 using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
 plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
+mlj = MLJ
 
 
 ### set variables ###
@@ -66,6 +67,7 @@ x_1 = df.by(hl_train, :Gender, percent = :id => x -> length(x) / df.nrow(hl_trai
 @df x_1 bar(:Gender, :percent;
     title = "gender distribution", xlabel = "gender", ylabel = "percent",
     color = "black", fill = (0, 0.8, :orange), legend = :none)
+x_1 = nothing
 
 # age
 summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 49, max 85, mean 39
@@ -77,6 +79,11 @@ summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 4
 df.by(hl_train, :Driving_License,
     count = :id => x -> length(x),
     percent = :id => x -> length(x) / df.nrow(hl_train)) # ~100% licenced
+
+# previously insured
+df.by(hl_train, :Previously_Insured,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 46% yes
 
 # vehicle age
 df.by(hl_train, :Vehicle_Age,
@@ -101,11 +108,37 @@ df.by(hl_train, :Policy_Sales_Channel_2,
     percent = :id => x -> length(x) / df.nrow(hl_train)) # 35% 152, 9% other
 
 # vintage
-df.by(hl_train, :Vintage,
+summarystats(hl_train[:, :Vintage]) # min 10, 1st quart. 82, median 154, 3rd quart. 227, max 299, mean 154
+@df hl_train density(:Vintage,
+    title = "vintage distribution", xlabel = "vintage", ylabel = "density",
+    color = "black", fill = (0, 0.8, :magenta), legend = :none) # almost uniform distribution
+
+# annual premium
+summarystats(hl_train[:, :Annual_Premium]) # min 2630, 1st quart. 24405, median 31669, 3rd quart. 39400, max 540165, mean 30564
+@df hl_train density(:Annual_Premium,
+    title = "annual premium distribution", xlabel = "annual premium", ylabel = "density",
+    color = "black", fill = (0, 0.8, :lightblue), legend = :none)
+
+# response
+df.by(hl_train, :Response,
     count = :id => x -> length(x),
-    percent = :id => x -> length(x) / df.nrow(hl_train))
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 12% responded
+
+## data types
+coerce!(hl_train,
+    :Gender => mlj.Multiclass,
+    :Age => mlj.Continuous,
+    :Driving_License => mlj.Multiclass,
+    :Region_Code_2 => mlj.Multiclass,
+    :Vehicle_Age => mlj.Continuous,
+    :Vehicle_Damage => mlj.Multiclass,
+    :Policy_Sales_Channel_2 => mlj.Multiclass,
+    :Previously_Insured => mlj.OrderedFactor,
+    :Response => mlj.OrderedFactor)
+df.levels!(hl_train[:Vehicle_Damage], ["Yes", "No"])
+hl_train[:Age_Bin] = cut(hl_train[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
+hl_train[:Vintage_Bin] = cut(hl_train[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
 
 
 ### model development ###
 ## train/test split
-println(df.names(hl_train[1:5, :]))
