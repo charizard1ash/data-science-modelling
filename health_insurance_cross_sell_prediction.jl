@@ -4,6 +4,7 @@ df = DataFrames
 using ZipFile
 using Distributions, StatsBase, Statistics
 using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
+plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
 
 
@@ -53,11 +54,58 @@ println(x_1) # keep policy sales channels 152, 26, 124, 160, 156, 122, 157, 154,
 
 
 ### feature engineering ###
+## scientific types
+schema(hl_train)
+
+## data analysis and transformations
+# gender
+df.by(hl_train, :Gender,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 54% male
+x_1 = df.by(hl_train, :Gender, percent = :id => x -> length(x) / df.nrow(hl_train))
+@df x_1 bar(:Gender, :percent;
+    title = "gender distribution", xlabel = "gender", ylabel = "percent",
+    color = "black", fill = (0, 0.8, :orange), legend = :none)
+
+# age
+summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 49, max 85, mean 39
+@df hl_train density(:Age;
+    title = "age distribution", xlabel = "age", ylabel = "density",
+    color = :black, fill = (0, 0.8, :lightgreen), legend = :none)
+
+# driving licence
+df.by(hl_train, :Driving_License,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # ~100% licenced
+
+# vehicle age
+df.by(hl_train, :Vehicle_Age,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 43% < 1 year, 53% 1-2 years
+
+# vehicle damage
+df.by(hl_train, :Vehicle_Damage,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 50 damaged
+
+# region code
 hl_train[!, :Region_Code_2] = ifelse.(in.(hl_train[:Region_Code], (["28","8","46","41","15","30","29","50","3"],)) .== true, hl_train[:Region_Code], "other")
-println(df.by(hl_train, :Region_Code_2,
+df.by(hl_train, :Region_Code_2,
     count = :id => x -> length(x),
-    percent = :id => x -> length(x) / df.nrow(hl_train)))
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 27% 28, 38% other
+
+# policy sales channel
 hl_train[!, :Policy_Sales_Channel_2] = ifelse.(in.(hl_train[:Policy_Sales_Channel], (["152","26","124","160","156","122","157","154","151"],)) .== true, hl_train[:Policy_Sales_Channel], "other")
-println(df.by(hl_train, :Policy_Sales_Channel_2,
+df.by(hl_train, :Policy_Sales_Channel_2,
     count = :id => x -> length(x),
-    percent = :id => x -> length(x) / df.nrow(hl_train)))
+    percent = :id => x -> length(x) / df.nrow(hl_train)) # 35% 152, 9% other
+
+# vintage
+df.by(hl_train, :Vintage,
+    count = :id => x -> length(x),
+    percent = :id => x -> length(x) / df.nrow(hl_train))
+
+
+### model development ###
+## train/test split
+println(df.names(hl_train[1:5, :]))
