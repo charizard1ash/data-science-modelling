@@ -4,7 +4,7 @@ df = DataFrames
 using ZipFile
 using Distributions, StatsBase, Statistics
 using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
-using MLBase, MLJ, MLJTuning
+using MLBase, MLJScientificTypes, MLJ, MLJTuning
 
 
 ### set variables ###
