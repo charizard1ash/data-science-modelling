@@ -1,6 +1,7 @@
 ### load libraries ###
 using CSV, DataFrames, Dates, CategoricalArrays
 df = DataFrames
+ca = CategoricalArrays
 using ZipFile
 using Distributions, StatsBase, Statistics
 using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
@@ -64,14 +65,14 @@ df.by(hl_train, :Gender,
     count = :id => x -> length(x),
     percent = :id => x -> length(x) / df.nrow(hl_train)) # 54% male
 x_1 = df.by(hl_train, :Gender, percent = :id => x -> length(x) / df.nrow(hl_train))
-@df x_1 bar(:Gender, :percent;
+@df x_1 plt.bar(:Gender, :percent;
     title = "gender distribution", xlabel = "gender", ylabel = "percent",
     color = "black", fill = (0, 0.8, :orange), legend = :none)
 x_1 = nothing
 
 # age
 summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 49, max 85, mean 39
-@df hl_train density(:Age;
+@df hl_train plt.density(:Age;
     title = "age distribution", xlabel = "age", ylabel = "density",
     color = :black, fill = (0, 0.8, :lightgreen), legend = :none)
 
@@ -109,13 +110,13 @@ df.by(hl_train, :Policy_Sales_Channel_2,
 
 # vintage
 summarystats(hl_train[:, :Vintage]) # min 10, 1st quart. 82, median 154, 3rd quart. 227, max 299, mean 154
-@df hl_train density(:Vintage,
+@df hl_train plt.density(:Vintage,
     title = "vintage distribution", xlabel = "vintage", ylabel = "density",
     color = "black", fill = (0, 0.8, :magenta), legend = :none) # almost uniform distribution
 
 # annual premium
 summarystats(hl_train[:, :Annual_Premium]) # min 2630, 1st quart. 24405, median 31669, 3rd quart. 39400, max 540165, mean 30564
-@df hl_train density(:Annual_Premium,
+@df hl_train plt.density(:Annual_Premium,
     title = "annual premium distribution", xlabel = "annual premium", ylabel = "density",
     color = "black", fill = (0, 0.8, :lightblue), legend = :none)
 
@@ -125,19 +126,45 @@ df.by(hl_train, :Response,
     percent = :id => x -> length(x) / df.nrow(hl_train)) # 12% responded
 
 ## data types
+# train
 coerce!(hl_train,
     :Gender => mlj.Multiclass,
     :Age => mlj.Continuous,
-    :Driving_License => mlj.Multiclass,
+    :Driving_License => mlj.OrderedFactor,
     :Region_Code_2 => mlj.Multiclass,
-    :Vehicle_Age => mlj.Continuous,
+    :Vehicle_Age => mlj.Multiclass,
     :Vehicle_Damage => mlj.Multiclass,
     :Policy_Sales_Channel_2 => mlj.Multiclass,
     :Previously_Insured => mlj.OrderedFactor,
     :Response => mlj.OrderedFactor)
-df.levels!(hl_train[:Vehicle_Damage], ["Yes", "No"])
-hl_train[:Age_Bin] = cut(hl_train[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
-hl_train[:Vintage_Bin] = cut(hl_train[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
+ca.levels!(hl_train[:Gender], ["Male","Female"])
+ca.levels!(hl_train[:Region_Code_2], ["28","8","46","41","15","30","29","50","3","other"])
+ca.levels!(hl_train[:Vehicle_Age], ["< 1 Year","1-2 Year","> 2 Years"])
+ca.levels!(hl_train[:Vehicle_Damage], ["Yes","No"])
+ca.levels!(hl_train[:Policy_Sales_Channel_2], ["152","26","124","160","156","122","157","154","151","other"])
+hl_train[:Age_Bin] = ca.cut(hl_train[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
+hl_train[:Vintage_Bin] = ca.cut(hl_train[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
+
+# test
+hl_test[!, :Region_Code_2] = ifelse.(in.(hl_test[:Region_Code], (["28","8","46","41","15","30","29","50","3"],)) .== true, hl_test[:Region_Code], "other")
+hl_test[!, :Policy_Sales_Channel_2] = ifelse.(in.(hl_test[:Policy_Sales_Channel], (["152","26","124","160","156","122","157","154","151"],)) .== true, hl_test[:Policy_Sales_Channel], "other")
+coerce!(hl_test,
+    :Gender => mlj.Multiclass,
+    :Age => mlj.Continuous,
+    :Driving_License => mlj.OrderedFactor,
+    :Region_Code_2 => mlj.Multiclass,
+    :Vehicle_Age => mlj.Multiclass,
+    :Vehicle_Damage => mlj.Multiclass,
+    :Policy_Sales_Channel_2 => mlj.Multiclass,
+    :Previously_Insured => mlj.OrderedFactor,
+    :Response => mlj.OrderedFactor)
+ca.levels!(hl_test[:Gender], ["Male","Female"])
+ca.levels!(hl_test[:Region_Code_2], ["28","8","46","41","15","30","29","50","3","other"])
+ca.levels!(hl_test[:Vehicle_Age], ["< 1 Year","1-2 Year","> 2 Years"])
+ca.levels!(hl_test[:Vehicle_Damage], ["Yes","No"])
+ca.levels!(hl_test[:Policy_Sales_Channel_2], ["152","26","124","160","156","122","157","154","151","other"])
+hl_test[:Age_Bin] = ca.cut(hl_test[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
+hl_test[:Vintage_Bin] = ca.cut(hl_test[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
 
 
 ### model development ###
