@@ -4,6 +4,8 @@ df = DataFrames
 ca = CategoricalArrays
 using ZipFile
 using Distributions, StatsBase, Statistics
+sb = StatsBase
+st = Statistics
 using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
 plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
@@ -71,7 +73,7 @@ x_1 = df.by(hl_train, :Gender, percent = :id => x -> length(x) / df.nrow(hl_trai
 x_1 = nothing
 
 # age
-summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 49, max 85, mean 39
+sb.summarystats(hl_train[:, :Age]) # min 20, 1st quart. 25, median 36, 3rd quart. 49, max 85, mean 39
 @df hl_train plt.density(:Age;
     title = "age distribution", xlabel = "age", ylabel = "density",
     color = :black, fill = (0, 0.8, :lightgreen), legend = :none)
@@ -109,13 +111,13 @@ df.by(hl_train, :Policy_Sales_Channel_2,
     percent = :id => x -> length(x) / df.nrow(hl_train)) # 35% 152, 9% other
 
 # vintage
-summarystats(hl_train[:, :Vintage]) # min 10, 1st quart. 82, median 154, 3rd quart. 227, max 299, mean 154
+sb.summarystats(hl_train[:, :Vintage]) # min 10, 1st quart. 82, median 154, 3rd quart. 227, max 299, mean 154
 @df hl_train plt.density(:Vintage,
     title = "vintage distribution", xlabel = "vintage", ylabel = "density",
     color = "black", fill = (0, 0.8, :magenta), legend = :none) # almost uniform distribution
 
 # annual premium
-summarystats(hl_train[:, :Annual_Premium]) # min 2630, 1st quart. 24405, median 31669, 3rd quart. 39400, max 540165, mean 30564
+sb.summarystats(hl_train[:, :Annual_Premium]) # min 2630, 1st quart. 24405, median 31669, 3rd quart. 39400, max 540165, mean 30564
 @df hl_train plt.density(:Annual_Premium,
     title = "annual premium distribution", xlabel = "annual premium", ylabel = "density",
     color = "black", fill = (0, 0.8, :lightblue), legend = :none)
@@ -144,6 +146,7 @@ ca.levels!(hl_train[:Vehicle_Damage], ["Yes","No"])
 ca.levels!(hl_train[:Policy_Sales_Channel_2], ["152","26","124","160","156","122","157","154","151","other"])
 hl_train[:Age_Bin] = ca.cut(hl_train[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
 hl_train[:Vintage_Bin] = ca.cut(hl_train[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
+hl_train[:Annual_Premium_Bin] = ca.cut(hl_train[:Annual_Premium], [0, 20000, 25000, 30000, 35000, 40000, 45000, 50000, Inf])
 
 # test
 hl_test[!, :Region_Code_2] = ifelse.(in.(hl_test[:Region_Code], (["28","8","46","41","15","30","29","50","3"],)) .== true, hl_test[:Region_Code], "other")
@@ -165,7 +168,16 @@ ca.levels!(hl_test[:Vehicle_Damage], ["Yes","No"])
 ca.levels!(hl_test[:Policy_Sales_Channel_2], ["152","26","124","160","156","122","157","154","151","other"])
 hl_test[:Age_Bin] = ca.cut(hl_test[:Age], [18, 25, 30, 35, 40, 45, 50, 55, 60, 65, Inf])
 hl_test[:Vintage_Bin] = ca.cut(hl_test[:Vintage], [0, 50, 100, 150, 200, 250, Inf])
+hl_test[:Annual_Premium_Bin] = ca.cut(hl_test[:Annual_Premium], [0, 20000, 25000, 30000, 35000, 40000, 45000, 50000, Inf])
 
 
 ### model development ###
 ## train/test split
+# note we use relevant features
+# core train dataset
+hl_train_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Region_Code_2, :Previously_Insured, :Vehicle_Age, :Vehicle_Damage, :Annual_Premium_Bin, :Policy_Sales_Channel_2, :Vintage_Bin, :Response])
+
+# core test dataset
+hl_test_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Region_Code_2, :Previously_Insured, :Vehicle_Age, :Vehicle_Damage, :Annual_Premium_Bin, :Policy_Sales_Channel_2, :Vintage_Bin, :Response])
+
+# split train
