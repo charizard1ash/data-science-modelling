@@ -16,6 +16,20 @@ mlj = MLJ
 data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
 
 
+### set functions ###
+## train/test split
+function sample_split(dt::DataFrames.DataFrame, percent::Float64)
+    n_train = sb.sample(collect(1:1:df.nrow(dt)), Int64(floor(df.nrow(dt) * percent)); replace = false)
+    n_test = Int64[]
+    for i in collect(1:1:df.nrow(dt))
+        if in(i, n_train) == false
+            push!(n_test, i)
+        end
+    end
+    return n_train, n_test
+end
+
+
 ### import data ###
 ## health train
 hl_train = CSV.read(string(data_location, "train.csv"); delim=",", header=1)
@@ -181,3 +195,6 @@ hl_train_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Reg
 hl_test_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Region_Code_2, :Previously_Insured, :Vehicle_Age, :Vehicle_Damage, :Annual_Premium_Bin, :Policy_Sales_Channel_2, :Vintage_Bin, :Response])
 
 # split train
+n_train, n_test = sample_split(hl_train_2, 0.8)
+hl_model_train = hl_train_2[n_train, :]
+hl_model_test = hl_train_2[n_test, :]
