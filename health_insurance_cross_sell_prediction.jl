@@ -10,6 +10,7 @@ using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
 plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
 mlj = MLJ
+using Base.Threads
 
 
 ### set variables ###
