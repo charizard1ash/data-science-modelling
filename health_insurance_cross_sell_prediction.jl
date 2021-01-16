@@ -13,7 +13,7 @@ mlj = MLJ
 
 
 ### set variables ###
-data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
+data_location = "..."
 
 
 ### set functions ###
