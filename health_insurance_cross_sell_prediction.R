@@ -10,8 +10,8 @@ library(pROC)
 
 
 ### set variables ###
-data_location <- "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
-r_func_location <- "C:/Users/nss6/Documents/Scripts/R/functions/"
+data_location <- "..."
+r_func_location <- "..."
 
 
 ### set functions ###
