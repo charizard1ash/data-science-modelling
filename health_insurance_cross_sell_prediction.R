@@ -228,7 +228,7 @@ saveRDS(object=hl_rf, file=paste0(data_location, "hl_rf.Rds"))
 modelLookup("rpart")
 
 # hyper-parameters for tuning
-xpnd_grid <- expand.grid(cp=c(0.05,0.1,0.15,0.2))
+xpnd_grid <- expand.grid(cp=c(0.01,0.05,0.1,0.15,0.2))
 
 # model training
 print(Sys.time())
@@ -243,7 +243,7 @@ print(paste0("seconds to run models: ", (end_time-start_time)[3]))
 
 # initial model performance statistics
 print(hl_dt)
-summary(object=hl_dt)
+# summary(object=hl_dt)
 varImp(object=hl_dt)
 
 # remove additional parameters
