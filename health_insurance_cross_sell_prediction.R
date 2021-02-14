@@ -89,7 +89,8 @@ saveRDS(object=hl_test_tmp, file=paste0(data_location, "hl_train_tmp.Rds"))
 
 names(getModelInfo())
 
-## model training control# training control
+## model training control
+# training control
 ctrl <- trainControl(method="boot",
                      number=1,
                      p=0.8,
@@ -107,8 +108,9 @@ print(Sys.time())
 start_time <- proc.time()
 hl_glm <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
                 method="glm",
-                family=binomial,
                 trControl=ctrl,
+                family=binomial,
+                model=FALSE,
                 metric="ROC")
 end_time <- proc.time()
 print(paste0("seconds to run models: ", (end_time-start_time)[3]))
@@ -199,6 +201,8 @@ modelLookup("rf")
 xpnd_grid <- expand.grid(mtry=c(2,3,4,5))
 
 # model training
+print(Sys.time())
+start_time <- proc.time()
 hl_rf <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
                method="rf",
                trControl=ctrl,
@@ -206,6 +210,8 @@ hl_rf <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
                ntrees=200,
                importance=TRUE,
                metric="ROC")
+end_time <- proc.time()
+print(paste0("seconds to run models: ", (end_time-start_time)[3]))
 
 # initial model performance statistics
 print(hl_rf)
@@ -225,11 +231,15 @@ modelLookup("rpart")
 xpnd_grid <- expand.grid(cp=c(0.05,0.1,0.15,0.2))
 
 # model training
+print(Sys.time())
+start_time <- proc.time()
 hl_dt <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
                method="rpart",
                trControl=ctrl,
                tuneGrid=xpnd_grid,
                metric="ROC")
+end_time <- proc.time()
+print(paste0("seconds to run models: ", (end_time-start_time)[3]))
 
 # initial model performance statistics
 print(hl_dt)
