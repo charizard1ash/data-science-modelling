@@ -8,18 +8,18 @@ library(cowplot)
 library(caret)
 library(gbm)
 library(pROC)
+library(mmpf)
 library(parallel)
 
 
 ### set variables ###
 data_location <- "..."
 r_func_location <- "..."
-no_cores <- detectCores()
+no_cores <- 1
 
 
 ### set functions ###
 source(file=paste0(r_func_location, "profiler.R"))
-source(file=paste0(r_func_location, "permutation_importance.R"))
 
 
 ### import data ###
@@ -163,12 +163,12 @@ modelLookup("xgbTree")
 
 # hyper-parameters for tuning
 xpnd_grid <- expand.grid(nrounds=500,
-                        max_depth=c(4,6,8),
-                        eta=c(0.05,0.1,0.2),
-                        gamma=c(0,1),
-                        colsample_bytree=c(1),
-                        min_child_weight=c(1),
-                        subsample=c(1))
+                         max_depth=c(4,6,8),
+                         eta=c(0.05,0.1,0.2),
+                         gamma=c(0,1),
+                         colsample_bytree=c(1),
+                         min_child_weight=c(1),
+                         subsample=c(1))
 
 # model training
 print(Sys.time())
@@ -223,30 +223,74 @@ rm(xpnd_grid, start_time, end_time)
 
 saveRDS(object=hl_rf, file=paste0(data_location, "hl_rf.Rds"))
 
-## decision tree
+## neural network
 # parameter lookup
-modelLookup("rpart")
+modelLookup("nnet")
 
 # hyper-parameters for tuning
-xpnd_grid <- expand.grid(cp=c(0.01,0.05,0.1,0.15,0.2))
+xpnd_grid <- expand.grid(size=c(3,5,8,10,15,20),
+                         decay=c(0,0.5,1))
 
 # model training
 print(Sys.time())
 start_time <- proc.time()
-hl_dt <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
-               method="rpart",
+hl_nn <- train(x=hl_train_tmp[, !c("Response")], y=hl_train_tmp[, Response],
+               method="nnet",
                trControl=ctrl,
                tuneGrid=xpnd_grid,
+               maxit=150,
                metric="ROC")
 end_time <- proc.time()
 print(paste0("seconds to run models: ", (end_time-start_time)[3]))
 
 # initial model performance statistics
-print(hl_dt)
-# summary(object=hl_dt)
-varImp(object=hl_dt)
+print(hl_nn)
+summary(object=hl_nn)
+varImp(object=hl_nn)
 
 # remove additional parameters
 rm(xpnd_grid, start_time, end_time)
 
-saveRDS(object=hl_dt, file=paste0(data_location, "hl_dt.Rds"))
+saveRDS(object=hl_nn, file=paste0(data_location, "hl_nn.Rds"))
+
+
+### further model testing ###
+## roc on second test dataset
+par(pty="s")
+roc(response=hl_test_tmp[, ifelse(Response=="yes", 1, 0)],
+    predictor=predict(object=hl_glm, newdata=hl_test_tmp, type="prob")[, 2],
+    plot=TRUE, col="green", lwd=2.5, legacy.axes=TRUE, print.auc=TRUE,
+    main="ROC Analysis", xlab="FPR", ylab="TPR")
+plot.roc(x=hl_test_tmp[, ifelse(Response=="yes", 1, 0)],
+         predictor=predict(object=hl_gbm, newdata=hl_test_tmp, type="prob")[, 2],
+         col="royalblue", lwd=2.5, add=TRUE, print.auc=TRUE, print.auc.y=0.45)
+plot.roc(x=hl_test_tmp[, ifelse(Response=="yes", 1, 0)],
+         predictor=predict(object=hl_xgb, newdata=as.matrix(model.matrix(~., data=hl_test_tmp[, !c("Response")])[, -1]), type="prob")[, 2],
+         col="coral", lwd=2.5, add=TRUE, print.auc=TRUE, print.auc.y=0.40)
+plot.roc(x=hl_test_tmp[, ifelse(Response=="yes", 1, 0)],
+         predictor=predict(object=hl_rf, newdata=hl_test_tmp, type="prob")[, 2],
+         col="purple", lwd=2.5, add=TRUE, print.auc=TRUE, print.auc.y=0.35)
+plot.roc(x=hl_test_tmp[, ifelse(Response=="yes", 1, 0)],
+         predictor=predict(object=hl_nn, newdata=hl_test_tmp, type="prob")[, 2],
+         col="orange", lwd=2.5, add=TRUE, print.auc=TRUE, print.auc.y=0.30)
+legend("bottomright", legend=c("logistic regression","gradient boosting","xgboost","random forest","neural network"), col=c("green","royalblue","coral","purple","orange"), cex=0.75, lwd=2.5, bty="n")
+par(pty="m")
+
+## optimal number of trees gbm
+hl_gbm_tr <- lapply(1:hl_gbm$finalModel$n.trees,
+                    function(x1) {
+                        if (x1 ==1 || x1 %% 10 == 0) {
+                            print(paste0("number of trees: ", x1))
+                        }
+                        
+                        val <- hl_test_tmp[, ifelse(Response=="yes", 1, 0)]
+                        pred <- predict(object=hl_gbm$finalModel, newdata=model.matrix(~., data=hl_test_tmp)[, -1], n.trees=x1, type="response")
+                        
+                        dt_1_roc <- roc(response=val, predictor=pred)
+                        
+                        dt_1 <- data.table(n_trees=x1,
+                                           auc=auc(dt_1_roc))
+                        
+                        return(dt_1)
+                    })
+hl_gbm_tr <- rbindlist(l=hl_gbm_tr, use.names=TRUE, fill=TRUE)
