@@ -222,7 +222,8 @@ Xt = mlj.transform(mlj.fit!(mlj.machine(OneHotEncoder(drop_last = true), X)))
 # mlj.models(matching(Xt, y))
 
 ## glm
-mlj.evaluate(LogisticClassifier(), Xt, y, resampling=Holdout(fraction_train = 0.7, shuffle=true), measures=[AreaUnderCurve, Precision, Recall, FScore])
+mlj.evaluate(LogisticClassifier(), Xt, y, resampling = Holdout(fraction_train = 0.7, shuffle=true), measures = [auc])
+mlj.evaluate(LogisticClassifier(), Xt, y, resampling = CV(; nfolds=5, shuffle=true), measures = [auc])
 hl_glm = fit!(mlj.machine(LogisticClassifier(), Xt, y))
 
 ## decision tree
