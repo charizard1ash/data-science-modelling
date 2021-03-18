@@ -10,40 +10,47 @@ using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
 plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
 mlj = MLJ
+@load DecisionTreeClassifier pkg = "DecisionTree"
+@load RandomForestClassifier pkg = "DecisionTree"
+@load LogisticClassifier pkg = "MLJLinearModels"
+@load XGBoostClassifier pkg = "XGBoost"
 using Base.Threads
 
 
 ### set variables ###
-data_location = "..."
+data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
 
 
 ### set functions ###
 ## train/test split
-function sample_split(dt::DataFrames.DataFrame, percent::Float64)
+function sample_split(dt::DataFrames.DataFrame, percent::Float64=0.7)
     n_train = sb.sample(collect(1:1:df.nrow(dt)), Int64(floor(df.nrow(dt) * percent)); replace = false)
-    n_test = Int64[]
-    for i in collect(1:1:df.nrow(dt))
-        if in(i, n_train) == false
-            push!(n_test, i)
-        end
-    end
+    n_test_df = df.DataFrame(x1=collect(1:1:df.nrow(dt)))
+    n_test_df[!, :x2] = ifelse.(in.(n_test_df[:x1], (n_train, )) .== true, 0, 1)
+    n_test = n_test_df[n_test_df[:x2] .== 1, :x1]
+    # n_test = Int64[]
+    # for i in collect(1:1:df.nrow(dt))
+    #     if in(i, n_train) == false
+    #         push!(n_test, i)
+    #     end
+    # end
     return n_train, n_test
 end
 
 
 ### import data ###
 ## health train
-hl_train = CSV.read(string(data_location, "train.csv"); delim=",", header=1)
+hl_train = CSV.read(string(data_location, "train.csv"), df.DataFrame; delim=",", header=1)
 hl_train[!, :Region_Code] = string.(convert.(Int64, hl_train[:, :Region_Code]))
 hl_train[!, :Policy_Sales_Channel] = string.(convert.(Int64, hl_train[:, :Policy_Sales_Channel]))
 
 ## health test
-hl_test = CSV.read(string(data_location, "test.csv"); delim=",", header=1)
+hl_test = CSV.read(string(data_location, "test.csv"), df.DataFrame; delim=",", header=1)
 hl_test[!, :Region_Code] = string.(convert.(Int64, hl_test[:, :Region_Code]))
 hl_test[!, :Policy_Sales_Channel] = string.(convert.(Int64, hl_test[:, :Policy_Sales_Channel]))
 
 ## health submission
-hl_submission = CSV.read(string(data_location, "sample_submission.csv"); delim=",", header=1)
+hl_submission = CSV.read(string(data_location, "sample_submission.csv"), df.DataFrame; delim=",", header=1)
 
 
 ### exploratory data analysis ###
@@ -196,6 +203,33 @@ hl_train_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Reg
 hl_test_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Region_Code_2, :Previously_Insured, :Vehicle_Age, :Vehicle_Damage, :Annual_Premium_Bin, :Policy_Sales_Channel_2, :Vintage_Bin, :Response])
 
 # split train
-n_train, n_test = sample_split(hl_train_2, 0.8)
+n_train, n_test = mlj.partition(1:df.nrow(hl_train_2), 0.8; shuffle=true)
 hl_model_train = hl_train_2[n_train, :]
 hl_model_test = hl_train_2[n_test, :]
+
+## core training dataset
+y, X = mlj.unpack(hl_model_train, ==(:Response), colname -> true)
+df.select!(X, Not(:id))
+
+# one hot encoded predictor variables
+Xt = mlj.transform(mlj.fit!(mlj.machine(OneHotEncoder(drop_last = true), X)))
+
+# search for models
+# for i in collect(1:1:length(mlj.models(matching(Xt, y)))) println(mlj.models(matching(Xt, y))[i]) end
+
+# check models
+# mlj.models(matching(X, y))
+# mlj.models(matching(Xt, y))
+
+## glm
+mlj.evaluate(LogisticClassifier(), Xt, y, resampling=Holdout(fraction_train = 0.7, shuffle=true), measures=[AreaUnderCurve, Precision, Recall, FScore])
+hl_glm = fit!(mlj.machine(LogisticClassifier(), Xt, y))
+
+## decision tree
+hl_dt = fit!(mlj.machine(DecisionTreeClassifier(), Xt, y))
+
+## random RandomForestClassifier
+hl_rf = fit!(mlj.machine(RandomForestClassifier(), Xt, y))
+
+## xgboost classifier
+hl_xgb = fit!(mlj.machine(XGBoostClassifier(), Xt, y))
