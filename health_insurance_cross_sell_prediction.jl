@@ -20,7 +20,7 @@ using Base.Threads
 
 
 ### set variables ###
-data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
+data_location = "..."
 
 
 ### set functions ###
@@ -232,10 +232,11 @@ mlj.fitted_params(hl_glm)
 mlj.report(hl_glm)
 
 ## decision tree
-r1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [-1, 5, 7, 8, 10])
-r2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [10, 15, 20, 25, 30])
-r3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [20, 35, 50])
-r4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.05])
+# mlj.info(DecisionTreeClassifier)
+r1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [10, 20, 30])
+r2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [25, 50])
+r3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [25, 50])
+r4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.01, 0.05])
 dt_tune = TunedModel(;model = DecisionTreeClassifier(),
     tuning = Grid(),
     resampling = Holdout(fraction_train = 0.7, shuffle = true),
@@ -243,4 +244,40 @@ dt_tune = TunedModel(;model = DecisionTreeClassifier(),
     repeats = 1,
     range = [r1, r2, r3, r4])
 hl_dt = mlj.machine(dt_tune, Xt, y)
+println(now())
 mlj.fit!(hl_dt; force = true)
+(r1, r2, r3, r4) = (nothing, nothing, nothing, nothing)
+println(now())
+mlj.save(string(data_location, "hl_dt.jlso"), hl_dt)
+mlj.fitted_params(hl_dt)
+mlj.report(hl_dt).best_model
+mlj.report(hl_dt).best_result
+mlj.report(hl_dt).best_report
+mlj.report(hl_dt).history
+mlj.report(hl_dt).plotting
+
+## random RandomForestClassifier
+# mlj.info(RandomForestClassifier)
+r1 = mlj.range(RandomForestClassifier(), :max_depth; values = [10, 20])
+r2 = mlj.range(RandomForestClassifier(), :min_samples_leaf; values = [25, 50])
+r3 = mlj.range(RandomForestClassifier(), :min_samples_split; values = [25, 50])
+r4 = mlj.range(RandomForestClassifier(), :min_purity_increase; values = [0.00, 0.05])
+r5 = mlj.range(RandomForestClassifier(), :n_trees; values = [50, 100, 150])
+rf_tune = TunedModel(; model = RandomForestClassifier(),
+    tuning = Grid(),
+    resampling = Holdout(fraction_train = 0.7, shuffle = true),
+    measure = [auc, cross_entropy],
+    repeats = 1,
+    range = [r1, r2, r3, r4, r5])
+hl_rf = mlj.machine(rf_tune, Xt, y)
+println(now())
+mlj.fit!(hl_rf; force = true)
+(r1, r2, r3, r4, r5) = (nothing, nothing, nothing, nothing, nothing)
+println(now())
+mlj.save(string(data_location, "hl_rf.jlso"), hl_rf)
+mlj.fitted_params(hl_rf)
+mlj.report(hl_rf).best_model
+mlj.report(hl_rf).best_result
+mlj.report(hl_rf).best_report
+mlj.report(hl_rf).history
+mlj.report(hl_rf).plotting
