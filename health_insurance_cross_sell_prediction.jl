@@ -232,13 +232,13 @@ mlj.fitted_params(hl_glm)
 mlj.report(hl_glm)
 
 ## decision tree
-r1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [-1, 5, 6, 7, 8, 9, 10])
-r2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [5, 10, 15, 20, 25, 30])
-r3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [20, 30, 40, 50])
-r4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.01, 0.05, 0.10])
+r1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [-1, 5, 7, 8, 10])
+r2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [10, 15, 20, 25, 30])
+r3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [20, 35, 50])
+r4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.05])
 dt_tune = TunedModel(;model = DecisionTreeClassifier(),
     tuning = Grid(),
-    resampling = CV(nfolds = 5, shuffle = true),
+    resampling = Holdout(fraction_train = 0.7, shuffle = true),
     measure = [auc, cross_entropy],
     repeats = 1,
     range = [r1, r2, r3, r4])
