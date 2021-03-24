@@ -10,17 +10,19 @@ using Colors, ColorBrewer, Plots, StatsPlots, PlotThemes
 plt = Plots
 using MLBase, MLJScientificTypes, MLJ, MLJTuning
 mlj = MLJ
-@load DecisionTreeClassifier pkg = "DecisionTree"
-@load RandomForestClassifier pkg = "DecisionTree"
-@load LogisticClassifier pkg = "MLJLinearModels"
-@load XGBoostClassifier pkg = "XGBoost"
+mlj.@load DecisionTreeClassifier pkg = "DecisionTree"
+mlj.@load RandomForestClassifier pkg = "DecisionTree"
+mlj.@load LogisticClassifier pkg = "MLJLinearModels"
+mlj.@load JLBoostClassifier pkg = "JLBoostMLJ"
+mlj.@load XGBoostClassifier pkg = "XGBoost"
 using ShapML
 shap = ShapML
 using Base.Threads
+using JLD2
 
 
 ### set variables ###
-data_location = "..."
+data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
 
 
 ### set functions ###
@@ -206,6 +208,8 @@ hl_test_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Regi
 
 # split train
 n_train, n_test = mlj.partition(1:df.nrow(hl_train_2), 0.8; shuffle=true)
+JLD2.@save string(data_location, "n_train.jld2") n_train
+JLD2.@save string(data_location, "n_test.jld2") n_test
 hl_model_train = hl_train_2[n_train, :]
 hl_model_test = hl_train_2[n_test, :]
 
@@ -228,8 +232,10 @@ mlj.evaluate(LogisticClassifier(), Xt, y, resampling = Holdout(fraction_train = 
 mlj.evaluate(LogisticClassifier(), Xt, y, resampling = CV(nfolds = 5, shuffle = true), measures = [auc, cross_entropy])
 hl_glm = mlj.machine(LogisticClassifier(), Xt, y)
 mlj.fit!(hl_glm; force = true)
+mlj.save(string(data_location, "hl_glm.jlso"), hl_glm)
 mlj.fitted_params(hl_glm)
 mlj.report(hl_glm)
+GC.gc()
 
 ## decision tree
 # mlj.info(DecisionTreeClassifier)
@@ -281,3 +287,12 @@ mlj.report(hl_rf).best_result
 mlj.report(hl_rf).best_report
 mlj.report(hl_rf).history
 mlj.report(hl_rf).plotting
+
+## gbm
+JLBoostClassifier()
+mlj.info(JLBoostClassifier)
+
+## xgboost classifier
+XGBoostClassifier()
+mlj.info(XGBoostClassifier)
+hl_xgb = fit!(mlj.machine(XGBoostClassifier(), Xt, y))
