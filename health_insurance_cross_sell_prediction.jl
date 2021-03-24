@@ -13,7 +13,7 @@ mlj = MLJ
 mlj.@load DecisionTreeClassifier pkg = "DecisionTree"
 mlj.@load RandomForestClassifier pkg = "DecisionTree"
 mlj.@load LogisticClassifier pkg = "MLJLinearModels"
-mlj.@load JLBoostClassifier pkg = "JLBoostMLJ"
+using JLBoostMLJ
 mlj.@load XGBoostClassifier pkg = "XGBoost"
 using ShapML
 shap = ShapML
