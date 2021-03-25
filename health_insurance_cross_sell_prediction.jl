@@ -13,7 +13,7 @@ mlj = MLJ
 mlj.@load DecisionTreeClassifier pkg = "DecisionTree"
 mlj.@load RandomForestClassifier pkg = "DecisionTree"
 mlj.@load LogisticClassifier pkg = "MLJLinearModels"
-using JLBoostMLJ
+mlj.@load EvoTreeClassifier pkg = "EvoTrees"
 mlj.@load XGBoostClassifier pkg = "XGBoost"
 using ShapML
 shap = ShapML
@@ -22,7 +22,7 @@ using JLD2
 
 
 ### set variables ###
-data_location = "C:/Users/nss6/Documents/Data/Kaggle/health-insurance-cross-sell-prediction/"
+data_location = "..."
 
 
 ### set functions ###
@@ -207,9 +207,11 @@ hl_train_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Reg
 hl_test_2 = df.select(hl_train, [:id, :Gender, :Age_Bin, :Driving_License, :Region_Code_2, :Previously_Insured, :Vehicle_Age, :Vehicle_Damage, :Annual_Premium_Bin, :Policy_Sales_Channel_2, :Vintage_Bin, :Response])
 
 # split train
-n_train, n_test = mlj.partition(1:df.nrow(hl_train_2), 0.8; shuffle=true)
-JLD2.@save string(data_location, "n_train.jld2") n_train
-JLD2.@save string(data_location, "n_test.jld2") n_test
+# n_train, n_test = mlj.partition(1:df.nrow(hl_train_2), 0.8; shuffle=true)
+# JLD2.@save string(data_location, "n_train.jld2") n_train
+# JLD2.@save string(data_location, "n_test.jld2") n_test
+JLD2.@load string(data_location, "n_train.jld2") n_train
+JLD2.@load string(data_location, "n_test.jld2") n_test
 hl_model_train = hl_train_2[n_train, :]
 hl_model_test = hl_train_2[n_test, :]
 
@@ -228,33 +230,35 @@ Xt = mlj.transform(mlj.fit!(mlj.machine(OneHotEncoder(drop_last = true), X)))
 # mlj.models(matching(Xt, y))
 
 ## glm
-mlj.evaluate(LogisticClassifier(), Xt, y, resampling = Holdout(fraction_train = 0.7, shuffle=true), measures = [auc, cross_entropy])
-mlj.evaluate(LogisticClassifier(), Xt, y, resampling = CV(nfolds = 5, shuffle = true), measures = [auc, cross_entropy])
-hl_glm = mlj.machine(LogisticClassifier(), Xt, y)
-mlj.fit!(hl_glm; force = true)
-mlj.save(string(data_location, "hl_glm.jlso"), hl_glm)
+# mlj.evaluate(LogisticClassifier(), Xt, y, resampling = Holdout(fraction_train = 0.7, shuffle=true), measures = [auc, cross_entropy])
+# mlj.evaluate(LogisticClassifier(), Xt, y, resampling = CV(nfolds = 5, shuffle = true), measures = [auc, cross_entropy])
+# hl_glm = mlj.machine(LogisticClassifier(), Xt, y)
+# mlj.fit!(hl_glm; force = true)
+# mlj.save(string(data_location, "hl_glm.jlso"), hl_glm)
+hl_glm = mlj.machine(string(data_location, "hl_glm.jlso"))
 mlj.fitted_params(hl_glm)
 mlj.report(hl_glm)
 GC.gc()
 
 ## decision tree
 # mlj.info(DecisionTreeClassifier)
-r1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [10, 20, 30])
-r2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [25, 50])
-r3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [25, 50])
-r4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.01, 0.05])
-dt_tune = TunedModel(;model = DecisionTreeClassifier(),
-    tuning = Grid(),
-    resampling = Holdout(fraction_train = 0.7, shuffle = true),
-    measure = [auc, cross_entropy],
-    repeats = 1,
-    range = [r1, r2, r3, r4])
-hl_dt = mlj.machine(dt_tune, Xt, y)
-println(now())
-mlj.fit!(hl_dt; force = true)
-(r1, r2, r3, r4) = (nothing, nothing, nothing, nothing)
-println(now())
-mlj.save(string(data_location, "hl_dt.jlso"), hl_dt)
+# r_1 = mlj.range(DecisionTreeClassifier(), :max_depth; values = [10, 20, 30])
+# r_2 = mlj.range(DecisionTreeClassifier(), :min_samples_leaf; values = [25, 50])
+# r_3 = mlj.range(DecisionTreeClassifier(), :min_samples_split; values = [25, 50])
+# r_4 = mlj.range(DecisionTreeClassifier(), :min_purity_increase; values = [0.0, 0.01, 0.05])
+# dt_tune = TunedModel(;model = DecisionTreeClassifier(),
+#     tuning = Grid(),
+#     resampling = Holdout(fraction_train = 0.7, shuffle = true),
+#     measure = [auc, cross_entropy],
+#     repeats = 1,
+#     range = [r_1, r_2, r_3, r_4])
+# hl_dt = mlj.machine(dt_tune, Xt, y)
+# println(now())
+# mlj.fit!(hl_dt; force = true)
+# r_1, r_2, r_3, r_4 = nothing, nothing, nothing, nothing
+# println(now())
+# mlj.save(string(data_location, "hl_dt.jlso"), hl_dt)
+hl_dt = mlj.machine(string(data_location, "hl_dt.jlso"))
 mlj.fitted_params(hl_dt)
 mlj.report(hl_dt).best_model
 mlj.report(hl_dt).best_result
@@ -264,23 +268,24 @@ mlj.report(hl_dt).plotting
 
 ## random RandomForestClassifier
 # mlj.info(RandomForestClassifier)
-r1 = mlj.range(RandomForestClassifier(), :max_depth; values = [10, 20])
-r2 = mlj.range(RandomForestClassifier(), :min_samples_leaf; values = [25, 50])
-r3 = mlj.range(RandomForestClassifier(), :min_samples_split; values = [25, 50])
-r4 = mlj.range(RandomForestClassifier(), :min_purity_increase; values = [0.00, 0.05])
-r5 = mlj.range(RandomForestClassifier(), :n_trees; values = [50, 100, 150])
-rf_tune = TunedModel(; model = RandomForestClassifier(),
-    tuning = Grid(),
-    resampling = Holdout(fraction_train = 0.7, shuffle = true),
-    measure = [auc, cross_entropy],
-    repeats = 1,
-    range = [r1, r2, r3, r4, r5])
-hl_rf = mlj.machine(rf_tune, Xt, y)
-println(now())
-mlj.fit!(hl_rf; force = true)
-(r1, r2, r3, r4, r5) = (nothing, nothing, nothing, nothing, nothing)
-println(now())
-mlj.save(string(data_location, "hl_rf.jlso"), hl_rf)
+# r_1 = mlj.range(RandomForestClassifier(), :max_depth; values = [10, 20])
+# r_2 = mlj.range(RandomForestClassifier(), :min_samples_leaf; values = [25, 50])
+# r_3 = mlj.range(RandomForestClassifier(), :min_samples_split; values = [25, 50])
+# r_4 = mlj.range(RandomForestClassifier(), :min_purity_increase; values = [0.00, 0.05])
+# r_5 = mlj.range(RandomForestClassifier(), :n_trees; values = [50, 100, 150])
+# rf_tune = TunedModel(; model = RandomForestClassifier(),
+#     tuning = Grid(),
+#     resampling = Holdout(fraction_train = 0.7, shuffle = true),
+#     measure = [auc, cross_entropy],
+#     repeats = 1,
+#     range = [r_1, r_2, r_3, r_4, r_5])
+# hl_rf = mlj.machine(rf_tune, Xt, y)
+# println(now())
+# mlj.fit!(hl_rf; force = true)
+# r_1, r_2, r_3, r_4, r_5 = nothing, nothing, nothing, nothing, nothing
+# println(now())
+# mlj.save(string(data_location, "hl_rf.jlso"), hl_rf)
+hl_rf = mlj.machine(string(data_location, "hl_rf.jlso"))
 mlj.fitted_params(hl_rf)
 mlj.report(hl_rf).best_model
 mlj.report(hl_rf).best_result
@@ -289,8 +294,32 @@ mlj.report(hl_rf).history
 mlj.report(hl_rf).plotting
 
 ## gbm
-JLBoostClassifier()
-mlj.info(JLBoostClassifier)
+EvoTreeClassifier()
+# mlj.info(EvoTreeClassifier)
+# r_1 = range(EvoTreeClassifier(), :nrounds; values = [20, 30, 40, 50])
+# r_2 = range(EvoTreeClassifier(), :η; values = [0.01f0, 0.05f0, 0.10f0])
+# r_3 = range(EvoTreeClassifier(), :max_depth; values = [3, 4, 5])
+# r_4 = range(EvoTreeClassifier(), :γ; values = [0.00f0, 0.05f0])
+# r_5 = range(EvoTreeClassifier(), :λ; values = [0.00f0, 0.05f0, 0.10f0])
+# gbm_tune = TunedModel(; model = EvoTreeClassifier(),
+#     tuning = Grid(),
+#     resampling = Holdout(fraction_train = 0.7, shuffle = true),
+#     measure = [auc, cross_entropy],
+#     repeats = 1,
+#     range = [r_1, r_2, r_3, r_4, r_5])
+# hl_gbm = mlj.machine(gbm_tune, Xt, y)
+# println(now())
+# mlj.fit!(hl_gbm; force = true)
+# r_1, r_2, r_3, r_4, r_5 = nothing, nothing, nothing, nothing, nothing
+# println(now())
+# mlj.save(string(data_location, "hl_gbm.jlso"), hl_gbm)
+hl_gbm = mlj.machine(string(data_location, "hl_gbm.jlso"))
+mlj.fitted_params(hl_gbm)
+mlj.report(hl_gbm).best_model
+mlj.report(hl_gbm).best_result
+mlj.report(hl_gbm).best_report
+mlj.report(hl_gbm).history
+mlj.report(hl_gbm).plotting
 
 ## xgboost classifier
 XGBoostClassifier()
