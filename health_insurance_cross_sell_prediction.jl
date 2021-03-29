@@ -41,6 +41,12 @@ function sample_split(dt::DataFrames.DataFrame, percent::Float64=0.7)
     return n_train, n_test
 end
 
+## wrapper prediction function
+function predict_function(model, data)
+    data_pred = df.DataFrame(y_pred = mlj.broadcast(mlj.pdf, mlj.predict(model, data), 1))
+    return data_pred
+end
+
 
 ### import data ###
 ## health train
@@ -222,6 +228,11 @@ df.select!(X, Not(:id))
 # one hot encoded predictor variables
 Xt = mlj.transform(mlj.fit!(mlj.machine(OneHotEncoder(drop_last = true), X)))
 
+# shapley values DataFrames
+# n_shap = sb.sample(1:1:df.size(Xt)[1], 500; replace = false, ordered = false)
+# JLD2.@save string(data_location, "n_shap.jld2") n_shap
+JLD2.@load string(data_location, "n_shap.jld2") n_shap
+
 # search for models
 # for i in collect(1:1:length(mlj.models(matching(Xt, y)))) println(mlj.models(matching(Xt, y))[i]) end
 
@@ -238,7 +249,17 @@ Xt = mlj.transform(mlj.fit!(mlj.machine(OneHotEncoder(drop_last = true), X)))
 hl_glm = mlj.machine(string(data_location, "hl_glm.jlso"))
 mlj.fitted_params(hl_glm)
 mlj.report(hl_glm)
-GC.gc()
+
+# shapley values
+mlj.broadcast(mlj.pdf, mlj.predict(hl_glm, Xt), 0) # probability distribution for 0
+mlj.broadcast(mlj.pdf, mlj.predict(hl_glm, Xt), 1) # probability distribution for 1
+mlj.predict(hl_glm, Xt) # distribution as tuple
+mlj.predict_mode(hl_glm, Xt) # prediction category with highest category
+glm_shap = ShapML.shap(explain = Xt[n_shap, :],
+    reference = Xt,
+    model = hl_glm,
+    predict_function = predict_function,
+    sample_size = 60)
 
 ## decision tree
 # mlj.info(DecisionTreeClassifier)
@@ -265,6 +286,13 @@ mlj.report(hl_dt).best_result
 mlj.report(hl_dt).best_report
 mlj.report(hl_dt).history
 mlj.report(hl_dt).plotting
+
+# shapley values
+dt_shap = ShapML.shap(explain = Xt[n_shap, :],
+    reference = Xt,
+    model = hl_dt,
+    predict_function = predict_function,
+    sample_size = 60)
 
 ## random RandomForestClassifier
 # mlj.info(RandomForestClassifier)
@@ -293,9 +321,19 @@ mlj.report(hl_rf).best_report
 mlj.report(hl_rf).history
 mlj.report(hl_rf).plotting
 
+# shapley values
+rf_shap = ShapML.shap(explain = Xt[n_shap, :],
+    reference = Xt,
+    model = hl_rf,
+    predict_function = predict_function,
+    sample_size = 60)
+
 ## gbm
-EvoTreeClassifier()
+# EvoTreeClassifier()
 # mlj.info(EvoTreeClassifier)
+# mlj.evaluate(EvoTreeClassifier(nrounds = 50, η = 0.10f0, γ = 0.00f0, λ = 0.10f0, max_depth = 5), Xt, y,
+#     resampling = Holdout(fraction_train = 0.7, shuffle = true),
+#     measures = [auc, cross_entropy])
 # r_1 = range(EvoTreeClassifier(), :nrounds; values = [20, 30, 40, 50])
 # r_2 = range(EvoTreeClassifier(), :η; values = [0.01f0, 0.05f0, 0.10f0])
 # r_3 = range(EvoTreeClassifier(), :max_depth; values = [3, 4, 5])
@@ -314,14 +352,16 @@ EvoTreeClassifier()
 # println(now())
 # mlj.save(string(data_location, "hl_gbm.jlso"), hl_gbm)
 hl_gbm = mlj.machine(string(data_location, "hl_gbm.jlso"))
-mlj.fitted_params(hl_gbm)
+# mlj.fitted_params(hl_gbm)
 mlj.report(hl_gbm).best_model
 mlj.report(hl_gbm).best_result
 mlj.report(hl_gbm).best_report
 mlj.report(hl_gbm).history
 mlj.report(hl_gbm).plotting
 
-## xgboost classifier
-XGBoostClassifier()
-mlj.info(XGBoostClassifier)
-hl_xgb = fit!(mlj.machine(XGBoostClassifier(), Xt, y))
+# shapley values
+gbm_shap = ShapML.shap(explain = Xt[n_shap, :],
+    reference = Xt,
+    model = hl_gbm,
+    predict_function = predict_function,
+    sample_size = 60)
